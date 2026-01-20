@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "deep-research-agent-langgraph"
+version = "0.1.0"
+description = "LangGraph-based deep research agent that produces web-grounded reports with optional CoVe-style verification."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "langgraph>=0.2.0",
+  "langchain>=0.3.0",
+  "langchain-community>=0.3.0",
+  "openai>=1.0.0",
+  "tavily-python>=0.5.0",
+  "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+  "ruff>=0.6.0",
+]
+
+[project.scripts]
+research = "agent.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["agent"]
