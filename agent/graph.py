@@ -11,7 +11,7 @@ from .state import ResearchState, Note, VerificationClaim
 from .prompts import (
     PLANNER_SYSTEM, PLANNER_USER,
     EXTRACTOR_SYSTEM, EXTRACTOR_USER,
-    WRITER_SYSTEM, WRITER_USER,
+    WRITER_SYSTEM, REPORT_STYLE_HEADERS, WRITER_USER,
     COVE_COMPILER_SYSTEM, COVE_COMPILER_USER,
     COVE_REVISER_SYSTEM, COVE_REVISER_USER,
 )
@@ -30,6 +30,7 @@ class ResearchAgent:
             max_sources: int = 8,
             min_unique_domains: int = 4,
             enable_cove: bool = True,
+            report_style: str = "default",
     ):
         self.draft_llm = ChatOpenAI(model=draft_model)
         self.verify_llm = ChatOpenAI(model=verify_model)
@@ -38,6 +39,7 @@ class ResearchAgent:
         self.max_sources = max_sources
         self.min_unique_domains = min_unique_domains
         self.enable_cove = enable_cove
+        self.report_style = report_style
 
     def plan_research(self, state: ResearchState) -> dict[str, Any]:
         messages = [
@@ -85,9 +87,8 @@ class ResearchAgent:
             "search_results": search_results,
             "status": "extracting",
         }
-    
+
     def select_and_extract(self, state: ResearchState) -> dict[str, Any]:
-        # select sources and extract notes from each
         sources = select_sources(
             state["search_results"],
             max_sources=self.max_sources,
@@ -109,6 +110,16 @@ class ResearchAgent:
             response = self.draft_llm.invoke(messages)
             content = response.content if hasattr(response, 'content') else str(response)
 
+            # Strip markdown code blocks if present
+            content = content.strip()
+            if content.startswith("```json"):
+                content = content[7:]
+            if content.startswith("```"):
+                content = content[3:]
+            if content.endswith("```"):
+                content = content[:-3]
+            content = content.strip()
+
             try:
                 parsed = json.loads(content)
                 notes.append(Note(
@@ -118,7 +129,6 @@ class ResearchAgent:
                     relevance=parsed.get("relevance", ""),
                 ))
             except json.JSONDecodeError:
-                # fallback as raw
                 notes.append(Note(
                     source_url=source["url"],
                     bullets=[content[:500]],
@@ -131,29 +141,38 @@ class ResearchAgent:
             "notes": notes,
             "status": "drafting",
         }
-    
+
     def draft_report(self, state: ResearchState) -> dict[str, Any]:
         # Generate the initial report draft.
+
         outline_str = "\n".join(state["outline"]) if state.get("outline") else "Use your judgment"
         notes_str = format_notes_for_report(state["notes"], state["sources"])
         sources_str = formatted_sources_list(state["sources"])
-        
+
+        # Inject report style guidance into the writer system prompt
+        style = state.get("report_style", "default")
+        style_header = REPORT_STYLE_HEADERS.get(style, REPORT_STYLE_HEADERS["default"])
+        writer_system = WRITER_SYSTEM.format(style_header=style_header)
+
         messages = [
-            SystemMessage(content=WRITER_SYSTEM),
-            HumanMessage(content=WRITER_USER.format(
-                query=state["query"],
-                outline=outline_str,
-                notes=notes_str,
-                sources=sources_str,
-            )),
+            SystemMessage(content=writer_system),
+            HumanMessage(
+                content=WRITER_USER.format(
+                    query=state["query"],
+                    outline=outline_str,
+                    notes=notes_str,
+                    sources=sources_str,
+                )
+            ),
         ]
-        
+
         response = self.draft_llm.invoke(messages)
-        content = response.content if hasattr(response, 'content') else str(response)
-        
+        content = response.content if hasattr(response, "content") else str(response)
+
         next_status = "verifying" if self.enable_cove else "complete"
-        
+
         return {
+            "report_style": style,  # optional: keep it in state for downstream/debugging
             "report_draft": content,
             "report": None if self.enable_cove else content,
             "status": next_status,
@@ -281,6 +300,7 @@ def build_graph(
     max_sources: int = 8,
     min_unique_domains: int = 4,
     enable_cove: bool = True,
+    report_style: str = "default",
 ) -> StateGraph:
     # Build and return the research agent graph
     
@@ -292,6 +312,7 @@ def build_graph(
         max_sources=max_sources,
         min_unique_domains=min_unique_domains,
         enable_cove=enable_cove,
+        report_style=report_style,
     )
     
     # Create graph

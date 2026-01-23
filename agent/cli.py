@@ -53,14 +53,20 @@ def main():
         help="Max sources to use (default: 8)",
     )
     parser.add_argument(
-        "--no-cove",
+        "--cove",
         action="store_true",
-        help="Disable CoVe verification layer",
+        help="Enable CoVe verification layer (adds ~5 extra searches)",
     )
     parser.add_argument(
         "--output", "-o",
         type=str,
         help="Output file path (default: stdout)",
+    )
+    parser.add_argument(
+        "--report-style",
+        choices=["default", "executive", "academic", "bullet"],
+        default="default",
+        help="Report style/format (default, executive, academic, or bullet)",
     )
     
     args = parser.parse_args()
@@ -82,7 +88,7 @@ def main():
         parser.print_help()
         sys.exit(1)
     
-    print(f"\n🔍 Researching: {query}\n")
+    print(f"\nResearching: {query}\n")
     print("=" * 60)
     
     try:
@@ -93,7 +99,8 @@ def main():
             search_provider=args.search_provider,
             max_searches=args.max_searches,
             max_sources=args.max_sources,
-            enable_cove=not args.no_cove,
+            enable_cove=args.cove,
+            report_style=args.report_style,
         )
         
         report = result.get("report") or result.get("report_draft") or "No report generated"
@@ -106,11 +113,11 @@ def main():
         
         # Print summary stats
         print("\n" + "=" * 60)
-        print(f"📊 Sources used: {len(result.get('sources', []))}")
-        print(f"📊 Searches run: {len(result.get('search_results', []))}")
+        print(f"Sources used: {len(result.get('sources', []))}")
+        print(f"Searches run: {len(result.get('search_results', []))}")
         if result.get("verification_results"):
             confirmed = sum(1 for c in result["verification_results"] if c["status"] == "confirmed")
-            print(f"📊 Claims verified: {confirmed}/{len(result['verification_results'])}")
+            print(f"Claims verified: {confirmed}/{len(result['verification_results'])}")
         
     except Exception as e:
         print(f"\nError: {e}", file=sys.stderr)
