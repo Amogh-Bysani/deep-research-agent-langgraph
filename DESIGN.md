@@ -31,6 +31,11 @@ START
   -> END
 ```
 
+### LangSmith Studio Traces
+
+<img width="1728" height="957" alt="Screenshot 2026-01-23 at 5 37 06 PM" src="https://github.com/user-attachments/assets/c8b6f8bf-474e-45ca-add1-06acc3583782" />
+
+
 **Why this flow:**
 - Planner decomposes query into subquestions → better search coverage
 - Extraction enforces grounding → writer only sees structured notes, not raw HTML
