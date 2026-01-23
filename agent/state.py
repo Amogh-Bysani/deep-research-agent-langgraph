@@ -72,4 +72,5 @@ class ResearchState(TypedDict):
     # metadata
     status: str | Literal["planning", "searching", "extracting", "drafting", "verifying", "revising", "complete", "error"]
     error: str | None
+    report_style: str
     

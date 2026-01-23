@@ -73,6 +73,7 @@ class ResearchAgent:
             "plan": plan[:self.max_searches],
             "outline": outline,
             "status": "searching",
+            "messages": [{"role": "assistant", "content": f"Planned {len(plan[:self.max_searches])} subquestions."}],
         }
     
     def run_searches(self, state: ResearchState) -> dict[str, Any]:
@@ -86,6 +87,7 @@ class ResearchAgent:
         return {
             "search_results": search_results,
             "status": "extracting",
+            "messages": [{"role": "assistant", "content": f"Ran {len(search_results)} searches."}],
         }
 
     def select_and_extract(self, state: ResearchState) -> dict[str, Any]:
@@ -140,6 +142,7 @@ class ResearchAgent:
             "sources": sources,
             "notes": notes,
             "status": "drafting",
+            "messages": [{"role": "assistant", "content": f"Extracted notes from {len(sources)} sources."}],
         }
 
     def draft_report(self, state: ResearchState) -> dict[str, Any]:
@@ -176,6 +179,7 @@ class ResearchAgent:
             "report_draft": content,
             "report": None if self.enable_cove else content,
             "status": next_status,
+            "messages": [] if self.enable_cove else [{"role": "assistant", "content": content}],
         }
     
     def compile_verification(self, state: ResearchState) -> dict[str, Any]:
@@ -368,6 +372,7 @@ def run_research(
         "verification_results": None,
         "status": "planning",
         "error": None,
+        "report_style": config_kwargs.get("report_style", "default"),
     }
     
     final_state = graph.invoke(initial_state)
