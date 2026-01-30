@@ -3,6 +3,7 @@
 import streamlit as st
 import time
 import threading
+import random
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -31,6 +32,8 @@ EXAMPLE_QUERIES = [
 ]
 
 # Initialize session state
+if "placeholder" not in st.session_state:
+    st.session_state.placeholder = random.choice(EXAMPLE_QUERIES)
 if "query" not in st.session_state:
     st.session_state.query = ""
 if "result" not in st.session_state:
@@ -78,9 +81,9 @@ with st.sidebar:
 # Main query input
 query = st.text_area(
     "Research Query",
-    value=st.session_state.query,
+    key="query",
     height=100,
-    placeholder="e.g., " + EXAMPLE_QUERIES[0],
+    placeholder="e.g., " + st.session_state.placeholder,
 )
 
 # Run button
